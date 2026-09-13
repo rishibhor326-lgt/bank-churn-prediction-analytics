@@ -7,10 +7,10 @@
 SELECT
     Exited,
     COUNT(*) AS headcount,
-    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM bank_customers), 2) AS headcount_pct,
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM bank_churn.churn_modelling), 2) AS headcount_pct,
     ROUND(SUM(Balance), 2) AS total_balance,
-    ROUND(SUM(Balance) * 100.0 / (SELECT SUM(Balance) FROM bank_customers), 2) AS balance_pct
-FROM bank_customers
+    ROUND(SUM(Balance) * 100.0 / (SELECT SUM(Balance) FROM bank_churn.churn_modelling), 2) AS balance_pct
+FROM bank_churn.churn_modelling
 GROUP BY Exited;
 
 -- Result:

@@ -1,9 +1,3 @@
--- ============================================
--- Bank Customer Churn — Data Quality Check
--- Dataset: 10,000 bank customer records
--- ============================================
-
--- Check for NULL values across all key columns
 SELECT
     SUM(CASE WHEN CustomerId IS NULL THEN 1 ELSE 0 END) AS null_customer_id,
     SUM(CASE WHEN CreditScore IS NULL THEN 1 ELSE 0 END) AS null_credit_score,
@@ -18,6 +12,4 @@ SELECT
     SUM(CASE WHEN EstimatedSalary IS NULL THEN 1 ELSE 0 END) AS null_salary,
     SUM(CASE WHEN Exited IS NULL THEN 1 ELSE 0 END) AS null_exited,
     COUNT(*) AS total_rows
-FROM ;
-
--- Result: 0 nulls across all columns — dataset confirmed clean
+FROM bank_churn.churn_modelling;
