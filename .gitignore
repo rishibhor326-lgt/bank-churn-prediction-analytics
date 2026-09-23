@@ -4,7 +4,7 @@ venv/
 ENV/
 env/
 
-# Python Cache & Compiled Filesgit init
+# Python Cache & Compiled Files
 __pycache__/
 *.pyc
 *.pyo
@@ -22,3 +22,6 @@ Thumbs.db
 
 # Streamlit Local Secrets
 .streamlit/secrets.toml
+
+# Local model experiments
+churn_model_candidate.pkl

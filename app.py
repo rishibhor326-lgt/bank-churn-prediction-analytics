@@ -6,6 +6,33 @@ import plotly.express as px
 import shap
 import matplotlib.pyplot as plt
 
+FEATURES = [
+    'CreditScore', 'Geography', 'Gender', 'Age', 'Tenure', 'Balance',
+    'Num Of Products', 'Has Credit Card', 'Is Active Member', 'Estimated Salary'
+]
+ALIASES = {
+    'NumOfProducts': 'Num Of Products',
+    'HasCrCard': 'Has Credit Card',
+    'IsActiveMember': 'Is Active Member',
+    'EstimatedSalary': 'Estimated Salary'
+}
+
+
+def prepare_batch(df):
+    """Validate the uploaded schema before calling the model."""
+    for old, new in ALIASES.items():
+        if old in df and new in df:
+            raise ValueError(f"Both {old} and {new} are present; keep only one.")
+    prepared = df.rename(columns=ALIASES)
+    missing = [column for column in FEATURES if column not in prepared]
+    if missing:
+        raise ValueError("Missing required columns: " + ", ".join(missing))
+    if prepared[FEATURES].isna().any().any():
+        raise ValueError("Required model fields contain blank values.")
+    if prepared.empty:
+        raise ValueError("Upload a CSV with at least one customer.")
+    return prepared[FEATURES]
+
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Bank Customer Churn Predictor", layout="wide")
 st.title("🏦 Bank Customer Churn & Risk Analytics Engine")
@@ -36,14 +63,14 @@ def recommend_retention_action(row, churn_prob):
         
     is_active = row.get('Is Active Member', row.get('IsActiveMember', 1))
     if is_active == 0:
-        actions.append("Re-engagement: Send 0.5% Bonus Interest High-Yield Savings Promo")
+        actions.append("Re-engagement: Review an eligible engagement offer")
         
     balance = row.get('Balance', 0.0)
     if balance >= 50000 and churn_prob >= 0.5:
-        actions.append("VIP Outreach: Assign Dedicated Relationship Manager Call within 24 Hours")
+        actions.append("Priority Outreach: Review for a relationship manager call")
         
     if not actions:
-        actions.append("Targeted Retention: Send Custom Fee-Waiver & Feedback Survey")
+        actions.append("Targeted Retention: Request feedback and review available offers")
         
     return " | ".join(actions)
 
@@ -107,12 +134,15 @@ with tab1:
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Churn Probability", f"{prob*100:.1f}%")
-                if prob >= 0.5:
+                if prob >= 0.7:
                     st.error("⚠️ Status: High Churn Risk")
+                elif prob >= 0.4:
+                    st.warning("Status: Medium Churn Risk")
                 else:
                     st.success("✅ Status: Low Churn Risk")
             with col2:
-                st.metric("Expected Balance at Risk", f"${capital_risk:,.2f}")
+                st.metric("Balance-weighted risk score", f"${capital_risk:,.2f}")
+                st.caption("Probability × account balance; this is not a revenue or loss forecast.")
 
             st.subheader("💡 Recommended Retention Playbook")
             st.info(f"**Action Plan:** {recommended_action}")
@@ -163,21 +193,20 @@ with tab2:
     uploaded_file = st.file_uploader("Upload Customer Batch CSV", type=["csv"])
 
     if uploaded_file is not None and model is not None:
-        df_batch = pd.read_csv(uploaded_file)
+        try:
+            df_batch = pd.read_csv(uploaded_file)
+            df_batch_prep = prepare_batch(df_batch)
+            df_batch = df_batch.rename(columns=ALIASES).copy()
+        except (ValueError, pd.errors.ParserError, UnicodeDecodeError) as exc:
+            st.error(f"Cannot score this CSV: {exc}")
+            st.stop()
         
         # Rename columns to ensure pipeline compatibility
-        column_mapping = {
-            'NumOfProducts': 'Num Of Products',
-            'HasCrCard': 'Has Credit Card',
-            'IsActiveMember': 'Is Active Member',
-            'EstimatedSalary': 'Estimated Salary'
-        }
-        df_batch_prep = df_batch.rename(columns=column_mapping)
-
         # Batch scoring & Risk Calculation
         churn_probs = model.predict_proba(df_batch_prep)[:, 1]
         df_batch['Churn_Probability'] = churn_probs
-        df_batch['Capital_at_Risk'] = df_batch['Churn_Probability'] * df_batch['Balance']
+        df_batch['Balance_Weighted_Risk'] = df_batch['Churn_Probability'] * df_batch_prep['Balance'].to_numpy()
+        df_batch['Capital_at_Risk'] = df_batch['Balance_Weighted_Risk']
 
         def assign_risk(p):
             return 'High Risk' if p >= 0.7 else ('Medium Risk' if p >= 0.4 else 'Low Risk')
@@ -186,19 +215,21 @@ with tab2:
         
         # Apply Automated Actions
         df_batch['Recommended_Action'] = [
-            recommend_retention_action(row, p) for p, (_, row) in zip(churn_probs, df_batch.iterrows())
+            recommend_retention_action(row, p) for p, (_, row) in zip(churn_probs, df_batch_prep.iterrows())
         ]
 
         # Executive KPIs
         total_customers = len(df_batch)
-        total_balance = df_batch['Balance'].sum()
+        total_balance = df_batch_prep['Balance'].sum()
         total_risk = df_batch['Capital_at_Risk'].sum()
         high_risk_count = (df_batch['Risk_Tier'] == 'High Risk').sum()
-        high_risk_bal = df_batch[df_batch['Risk_Tier'] == 'High Risk']['Balance'].sum()
+        high_risk_bal = df_batch_prep.loc[df_batch['Risk_Tier'] == 'High Risk', 'Balance'].sum()
+        st.session_state['scored_df'] = df_batch.copy()
 
         st.markdown("### Executive Risk Summary")
         k1, k2, k3, k4 = st.columns(4)
-        k1.metric("Total Capital at Risk", f"${total_risk:,.2f}", f"{(total_risk/total_balance)*100:.1f}% of deposits" if total_balance else "0%")
+        k1.metric("Balance-weighted risk score", f"${total_risk:,.2f}", f"{(total_risk/total_balance)*100:.1f}% of balances" if total_balance else "0%")
+        st.caption("This score sums churn probability × balance. It does not estimate bank revenue or realized loss.")
         k2.metric("High Risk Accounts", f"{high_risk_count:,}", f"{(high_risk_count/total_customers)*100:.1f}% of total")
         k3.metric("High Risk Capital", f"${high_risk_bal:,.2f}")
         k4.metric("Avg Churn Risk", f"{df_batch['Churn_Probability'].mean()*100:.1f}%")
@@ -207,34 +238,35 @@ with tab2:
         st.markdown("---")
         st.subheader("Scored Customer Portfolio")
         tier_filter = st.multiselect("Filter Risk Tiers", ['High Risk', 'Medium Risk', 'Low Risk'], default=['High Risk', 'Medium Risk'])
-        filtered_df = df_batch[df_batch['Risk_Tier'].isin(tier_filter)].sort_values(by='Capital_at_Risk', ascending=False)
+        filtered_df = df_batch[df_batch['Risk_Tier'].isin(tier_filter)].sort_values(by='Balance_Weighted_Risk', ascending=False)
 
-        display_cols = [c for c in ['CustomerId', 'Surname', 'Geography', 'Balance', 'Churn_Probability', 'Capital_at_Risk', 'Risk_Tier', 'Recommended_Action'] if c in filtered_df.columns]
+        display_cols = [c for c in ['CustomerId', 'Surname', 'Geography', 'Balance', 'Churn_Probability', 'Balance_Weighted_Risk', 'Risk_Tier', 'Recommended_Action'] if c in filtered_df.columns]
         st.dataframe(filtered_df[display_cols], use_container_width=True)
 
-        csv_data = filtered_df.to_csv(index=False).encode('utf-8')
+        csv_data = df_batch.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Download Scored Financial Risk Report", csv_data, "bank_churn_financial_risk_report.csv", "text/csv")
 
 # --- TAB 3: EXECUTIVE MACRO ANALYTICS ---
 with tab3:
     st.header("📈 Executive Portfolio & Cohort Analysis")
-    st.write("Macro-level portfolio breakdown across geography, tenure, age, and product density.")
+    st.write("Portfolio breakdown across geography, tenure, and product count.")
 
-    try:
-        # Load the batch report previously generated to drive macro visuals
-        scored_df = pd.read_csv('bank_churn_financial_risk_report.csv')
+    scored_df = st.session_state.get('scored_df')
+    if scored_df is None:
+        st.info("Upload a customer CSV in Batch Risk Analysis to view portfolio charts.")
+    else:
         
         c1, c2 = st.columns(2)
         
         with c1:
-            st.subheader("Capital at Risk by Geography")
+            st.subheader("Balance-weighted risk by Geography")
             fig_geo = px.bar(
                 scored_df.groupby('Geography')['Capital_at_Risk'].sum().reset_index(),
                 x='Geography',
                 y='Capital_at_Risk',
                 color='Geography',
-                title="Total Deposit Capital at Risk by Country",
-                labels={'Capital_at_Risk': 'Capital at Risk ($)'}
+                title="Balance-weighted risk score by country",
+                labels={'Capital_at_Risk': 'Balance-weighted risk score ($)'}
             )
             st.plotly_chart(fig_geo, use_container_width=True)
 
@@ -242,11 +274,11 @@ with tab3:
             st.subheader("Churn Risk by Product Count")
             fig_prod = px.box(
                 scored_df,
-                x='NumOfProducts',
+                x='Num Of Products',
                 y='Churn_Probability',
-                color='NumOfProducts',
+                color='Num Of Products',
                 title="Churn Probability Distribution across Product Holdings",
-                labels={'NumOfProducts': 'Number of Products', 'Churn_Probability': 'Churn Prob'}
+                labels={'Num Of Products': 'Number of Products', 'Churn_Probability': 'Churn Prob'}
             )
             st.plotly_chart(fig_prod, use_container_width=True)
 
@@ -258,10 +290,7 @@ with tab3:
             x='Tenure',
             y='Capital_at_Risk',
             markers=True,
-            title="Capital at Risk over Customer Tenure (Years)",
-            labels={'Tenure': 'Tenure (Years)', 'Capital_at_Risk': 'Capital at Risk ($)'}
+            title="Balance-weighted risk score by customer tenure",
+            labels={'Tenure': 'Tenure (Years)', 'Capital_at_Risk': 'Balance-weighted risk score ($)'}
         )
         st.plotly_chart(fig_tenure, use_container_width=True)
-
-    except Exception:
-        st.info("Upload a batch file in Tab 2 and save it as `bank_churn_financial_risk_report.csv` in your project folder to view macro analytics.")

@@ -8,7 +8,7 @@ SELECT
     COUNT(*) AS total_customers,
     SUM(Exited) AS churned_customers,
     ROUND(SUM(Exited) * 100.0 / COUNT(*), 2) AS churn_rate_pct
-FROM 
+FROM bank_churn.churn_modelling
 GROUP BY Gender
 ORDER BY churn_rate_pct DESC;
 
@@ -18,6 +18,6 @@ SELECT
     COUNT(*) AS total_customers,
     SUM(Exited) AS churned_customers,
     ROUND(SUM(Exited) * 100.0 / COUNT(*), 2) AS churn_rate_pct
-FROM 
+FROM bank_churn.churn_modelling
 GROUP BY Geography
 ORDER BY churn_rate_pct DESC;

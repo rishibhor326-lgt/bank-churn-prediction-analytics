@@ -18,6 +18,6 @@ SELECT
     SUM(CASE WHEN EstimatedSalary IS NULL THEN 1 ELSE 0 END) AS null_salary,
     SUM(CASE WHEN Exited IS NULL THEN 1 ELSE 0 END) AS null_exited,
     COUNT(*) AS total_rows
-FROM ;
+FROM bank_churn.churn_modelling;
 
 -- Result: 0 nulls across all columns — dataset confirmed clean
