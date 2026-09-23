@@ -6,6 +6,28 @@ An analysis of 10,000 customer records with MySQL queries, a reproducible Python
 
 [Open the Bank Customer Churn & Risk Analytics dashboard](https://bank-churn-prediction-analytics-8wffa6wusyfgdedwdytuyu.streamlit.app/)
 
+## Dashboard preview
+
+<p align="center">
+  <img src="assets/screenshots/single-customer-evaluator.png" alt="Single-customer churn evaluator" width="49%">
+  <img src="assets/screenshots/prediction-shap-explanation.png" alt="Prediction result and SHAP explanation" width="49%">
+</p>
+
+<p align="center"><strong>Single-customer scoring and explainable model output</strong></p>
+
+<p align="center">
+  <img src="assets/screenshots/batch-risk-summary.png" alt="Batch risk executive summary" width="49%">
+  <img src="assets/screenshots/scored-customer-portfolio.png" alt="Scored customer portfolio and report download" width="49%">
+</p>
+
+<p align="center"><strong>Batch risk KPIs, customer prioritization, and scored report export</strong></p>
+
+<p align="center">
+  <img src="assets/screenshots/executive-analytics.png" alt="Executive portfolio analytics by geography and product count" width="98%">
+</p>
+
+<p align="center"><strong>Executive cohort analysis by geography and product holdings</strong></p>
+
 ## What is in this repository
 
 | File | Purpose |
