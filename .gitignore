@@ -1,0 +1,24 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Compiled Filesgit init
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+
+# Streamlit Local Secrets
+.streamlit/secrets.toml
