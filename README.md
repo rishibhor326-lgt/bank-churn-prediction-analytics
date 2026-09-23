@@ -2,6 +2,10 @@
 
 An analysis of 10,000 customer records with MySQL queries, a reproducible Python model comparison, and a Streamlit scoring app. `Churn=1` means the customer left; the MySQL table uses the equivalent name `Exited`.
 
+## Live application
+
+[Open the Bank Customer Churn & Risk Analytics dashboard](https://bank-churn-prediction-analytics-8wffa6wusyfgdedwdytuyu.streamlit.app/)
+
 ## What is in this repository
 
 | File | Purpose |
@@ -57,7 +61,7 @@ SQL analysis found that customers who left were about 20% of accounts but held a
 
 The app's balance-weighted risk score multiplies predicted churn probability by balance. It supports prioritization, but does not forecast actual withdrawal, revenue, or retention return. Recommended outreach actions are rules for review, not tested interventions. The 0.4 and 0.7 risk tier cutoffs are illustrative; validate them against outreach capacity and observed outcomes before operational use.
 
-The repository contains a CSV export for Power BI. It does not yet contain a `.pbix` report, dashboard screenshots, or a verified deployed app URL. Add these only when the actual artifacts are available.
+The Streamlit application is publicly deployed at the link above. The repository also contains a CSV export that can be imported into Power BI; it does not include a `.pbix` report.
 
 ## Author
 
