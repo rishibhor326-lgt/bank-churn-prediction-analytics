@@ -201,7 +201,6 @@ with tab2:
             st.error(f"Cannot score this CSV: {exc}")
             st.stop()
         
-        # Rename columns to ensure pipeline compatibility
         # Batch scoring & Risk Calculation
         churn_probs = model.predict_proba(df_batch_prep)[:, 1]
         df_batch['Churn_Probability'] = churn_probs
@@ -231,7 +230,7 @@ with tab2:
         k1.metric("Balance-weighted risk score", f"${total_risk:,.2f}", f"{(total_risk/total_balance)*100:.1f}% of balances" if total_balance else "0%")
         st.caption("This score sums churn probability × balance. It does not estimate bank revenue or realized loss.")
         k2.metric("High Risk Accounts", f"{high_risk_count:,}", f"{(high_risk_count/total_customers)*100:.1f}% of total")
-        k3.metric("High Risk Capital", f"${high_risk_bal:,.2f}")
+        k3.metric("High-risk account balances", f"${high_risk_bal:,.2f}")
         k4.metric("Avg Churn Risk", f"{df_batch['Churn_Probability'].mean()*100:.1f}%")
 
         # Dataframe Display & Export
@@ -240,7 +239,7 @@ with tab2:
         tier_filter = st.multiselect("Filter Risk Tiers", ['High Risk', 'Medium Risk', 'Low Risk'], default=['High Risk', 'Medium Risk'])
         filtered_df = df_batch[df_batch['Risk_Tier'].isin(tier_filter)].sort_values(by='Balance_Weighted_Risk', ascending=False)
 
-        display_cols = [c for c in ['CustomerId', 'Surname', 'Geography', 'Balance', 'Churn_Probability', 'Balance_Weighted_Risk', 'Risk_Tier', 'Recommended_Action'] if c in filtered_df.columns]
+        display_cols = [c for c in ['CustomerID', 'CustomerId', 'Surname', 'Geography', 'Balance', 'Churn_Probability', 'Balance_Weighted_Risk', 'Risk_Tier', 'Recommended_Action'] if c in filtered_df.columns]
         st.dataframe(filtered_df[display_cols], use_container_width=True)
 
         csv_data = df_batch.to_csv(index=False).encode('utf-8')
